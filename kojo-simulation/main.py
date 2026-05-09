@@ -1,11 +1,50 @@
 import config
-from src.entities import Client, Employee
-from src.events import ARRIVAL, create_event
 from src.logger import setup_logger
-from src.random_generators import RandomGenerator
+from src.simulator import KojoSimulator
+
+def run_single_replication(logger, seed: int, use_extra_employee: bool) -> dict:
+
+    scenario = "extra_employee_peak" if use_extra_employee else "two_employees"
+    logger.info(
+        "Running single replication | scenario=%s | seed=%s", scenario, seed)
+
+    simulator = KojoSimulator(
+        seed=seed,
+        use_extra_employee=use_extra_employee,
+        logger=logger,
+    )
+    results = simulator.run()
+
+    logger.info(
+        (
+            "RESULT | scenario=%s | total=%s | completed=%s | "
+            "delayed=%s | delayed_percentage=%.2f | average_wait=%.2f | max_wait=%.2f"
+        ),
+        scenario,
+        results["total_customers"],
+        results["completed_customers"],
+        results["delayed_customers"],
+        results["delayed_percentage"],
+        results["average_wait"],
+        results["max_wait"],
+    )
+
+    logger.info(
+        (
+            "UTILIZATION | scenario=%s | emp1=%.3f | emp2=%.3f | emp3=%.3f"
+        ),
+        scenario,
+        results["employee_1_utilization"],
+        results["employee_2_utilization"],
+        results["employee_3_utilization"],
+    )
+    return results
+
 
 def main() -> None:
-
+    """
+    Se ejecuta una réplica de ambos escenarios usando la misma semilla para que la comparación sea reproducible.
+    """
     config.validate_config()
 
     logger = setup_logger(
@@ -14,65 +53,35 @@ def main() -> None:
         log_file=config.LOG_FILE,
     )
 
-    logger.info("Kojo simulation project - Etapa 1 iniciada")
+    logger.info("Kojo simulation project")
 
-    rng = RandomGenerator(seed=config.DEFAULT_SEED)
+    seed = config.DEFAULT_SEED
 
-    product = rng.choose_product(config.P_SANDWICH)
-    service_min, service_max = config.SERVICE_TIME_RANGES[product]
-    service_time = rng.uniform(service_min, service_max)
-
-    client = Client(
-        id=1,
-        arrival_time=0.0,
-        product=product,
-        service_time=service_time,
+    base_results = run_single_replication(
+        logger=logger,
+        seed=seed,
+        use_extra_employee=False,
     )
 
-    employee = Employee(id=1)
+    extra_results = run_single_replication(
+        logger=logger,
+        seed=seed,
+        use_extra_employee=True,
+    )
 
-    logger.info(
-        "Cliente de prueba creado | id=%s | product=%s | service_time=%.2f",
-        client.id,
-        client.product,
-        client.service_time,
+    improvement = (
+        base_results["delayed_percentage"]
+        - extra_results["delayed_percentage"]
     )
 
     logger.info(
-        "Empleado de prueba creado | id=%s | available=%s",
-        employee.id,
-        employee.is_available(),
+        "COMPARISON | base_delayed=%.2f | extra_delayed=%.2f | improvement_points=%.2f",
+        base_results["delayed_percentage"],
+        extra_results["delayed_percentage"],
+        improvement,
     )
 
-    event = create_event(
-        time=client.arrival_time,
-        event_type=ARRIVAL,
-        sequence=0,
-        payload=client,
-    )
-
-    logger.info(
-        "Evento de prueba creado | time=%.2f | type=%s | priority=%s",
-        event.time,
-        event.event_type,
-        event.priority,
-    )
-
-    employee.start_service(client, current_time=0.0)
-    logger.info(
-        "Servicio de prueba iniciado | employee=%s | client=%s",
-        employee.id,
-        client.id,
-    )
-
-    finished_client = employee.finish_service(current_time=client.service_time)
-    logger.info(
-        "Servicio de prueba terminado | client=%s | total_time=%.2f | employee_busy_time=%.2f",
-        finished_client.id,
-        finished_client.total_time_in_system(),
-        employee.busy_time,
-    )
-
+    logger.info("Kojo simulation project finalizado correctamente")
 
 if __name__ == "__main__":
     main()
