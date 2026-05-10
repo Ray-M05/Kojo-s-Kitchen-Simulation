@@ -1,0 +1,72 @@
+{
+    "experiment_configs": [
+        {
+            "config_id": "arrival_normal_6_peak_2_5",
+            "mean_interarrival_normal": 6.0,
+            "mean_interarrival_peak": 2.5
+        },
+        {
+            "config_id": "arrival_normal_6_peak_2_0",
+            "mean_interarrival_normal": 6.0,
+            "mean_interarrival_peak": 2.0
+        },
+        {
+            "config_id": "arrival_normal_5_peak_2_5",
+            "mean_interarrival_normal": 5.0,
+            "mean_interarrival_peak": 2.5
+        }
+    ],
+    "day_open": 0.0,
+    "day_close": 660.0,
+    "peak_periods": [
+        [
+            90.0,
+            210.0
+        ],
+        [
+            420.0,
+            540.0
+        ]
+    ],
+    "day_segments": [
+        [
+            0.0,
+            90.0,
+            "normal"
+        ],
+        [
+            90.0,
+            210.0,
+            "peak"
+        ],
+        [
+            210.0,
+            420.0,
+            "normal"
+        ],
+        [
+            420.0,
+            540.0,
+            "peak"
+        ],
+        [
+            540.0,
+            660.0,
+            "normal"
+        ]
+    ],
+    "p_sandwich": 0.5,
+    "p_sushi": 0.5,
+    "service_time_ranges": {
+        "sandwich": [
+            3.0,
+            5.0
+        ],
+        "sushi": [
+            5.0,
+            8.0
+        ]
+    },
+    "wait_threshold": 5.0,
+    "n_replications": 10
+}

@@ -27,13 +27,23 @@ DAY_SEGMENTS = [
 
 # Parámetros de llegada
 # Se interpretan como medias del tiempo entre llegadas, en minutos.
-MEAN_INTERARRIVAL_NORMAL = 6.0
-MEAN_INTERARRIVAL_PEAK = 2.5
-
-INTERARRIVAL_MEANS = {
-    NORMAL: MEAN_INTERARRIVAL_NORMAL,
-    PEAK: MEAN_INTERARRIVAL_PEAK,
-}
+EXPERIMENT_CONFIGS = [
+    {
+        "config_id": "arrival_normal_6_peak_2_5",
+        "mean_interarrival_normal": 6.0,
+        "mean_interarrival_peak": 2.5,
+    },
+    {
+        "config_id": "arrival_normal_6_peak_2_0",
+        "mean_interarrival_normal": 6.0,
+        "mean_interarrival_peak": 2.0,
+    },
+    {
+        "config_id": "arrival_normal_5_peak_2_5",
+        "mean_interarrival_normal": 5.0,
+        "mean_interarrival_peak": 2.5,
+    },
+]
 
 # Prob de clientes que desean productos
 PRODUCT_SANDWICH = "sandwich"
@@ -54,17 +64,40 @@ SERVICE_TIME_RANGES = {
     PRODUCT_SUSHI: (SUSHI_SERVICE_MIN, SUSHI_SERVICE_MAX),
 }
 
-
 WAIT_THRESHOLD = 5.0
 BASE_EMPLOYEES = 2
 EXTRA_EMPLOYEE_ID = 3
 
-N_REPLICATIONS = 100
+N_REPLICATIONS = 10
 DEFAULT_SEED = 1
 
 LOG_ENABLED = True
-LOG_LEVEL = "INFO"
+LOG_LEVEL = "DEBUG"
 LOG_FILE = "logs/simulation.log"
+
+
+def validate_experiment_config(experiment_config: dict) -> None:
+
+    required_keys = [
+        "config_id",
+        "mean_interarrival_normal",
+        "mean_interarrival_peak",
+    ]
+
+    for key in required_keys:
+        if key not in experiment_config:
+            raise ValueError(f"Falta la clave '{key}' en EXPERIMENT_CONFIGS.")
+
+    if experiment_config["mean_interarrival_normal"] <= 0:
+        raise ValueError(
+            f"mean_interarrival_normal debe ser positivo en {experiment_config['config_id']}."
+        )
+
+    if experiment_config["mean_interarrival_peak"] <= 0:
+        raise ValueError(
+            f"mean_interarrival_peak debe ser positivo en {experiment_config['config_id']}."
+        )
+
 
 
 def validate_config() -> None:
@@ -80,12 +113,6 @@ def validate_config() -> None:
     if abs((P_SANDWICH + P_SUSHI) - 1.0) > 1e-9:
         raise ValueError("Las probabilidades de productos deben sumar 1.")
 
-    if MEAN_INTERARRIVAL_NORMAL <= 0:
-        raise ValueError("MEAN_INTERARRIVAL_NORMAL debe ser positivo.")
-
-    if MEAN_INTERARRIVAL_PEAK <= 0:
-        raise ValueError("MEAN_INTERARRIVAL_PEAK debe ser positivo.")
-
     for product, (minimum, maximum) in SERVICE_TIME_RANGES.items():
         if minimum <= 0:
             raise ValueError(f"El tiempo mínimo de {product} debe ser positivo.")
@@ -97,5 +124,9 @@ def validate_config() -> None:
             raise ValueError(f"Segmento fuera del horario del día: {segment_type}.")
         if end <= start:
             raise ValueError(f"Segmento inválido: {segment_type}.")
-        if segment_type not in INTERARRIVAL_MEANS:
-            raise ValueError(f"Tipo de segmento desconocido: {segment_type}.")
+
+    if not EXPERIMENT_CONFIGS:
+        raise ValueError("Debe existir al menos una configuración experimental.")
+
+    for experiment_config in EXPERIMENT_CONFIGS:
+        validate_experiment_config(experiment_config)

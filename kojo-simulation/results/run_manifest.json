@@ -1,0 +1,39 @@
+{
+    "created_at": "2026-05-10T11:49:41",
+    "n_rows": 60,
+    "n_replications": 10,
+    "scenarios": [
+        {
+            "name": "two_employees",
+            "use_extra_employee": false
+        },
+        {
+            "name": "extra_employee_peak",
+            "use_extra_employee": true
+        }
+    ],
+    "experiment_configs": [
+        {
+            "config_id": "arrival_normal_6_peak_2_5",
+            "mean_interarrival_normal": 6.0,
+            "mean_interarrival_peak": 2.5
+        },
+        {
+            "config_id": "arrival_normal_6_peak_2_0",
+            "mean_interarrival_normal": 6.0,
+            "mean_interarrival_peak": 2.0
+        },
+        {
+            "config_id": "arrival_normal_5_peak_2_5",
+            "mean_interarrival_normal": 5.0,
+            "mean_interarrival_peak": 2.5
+        }
+    ],
+    "outputs": {
+        "raw_csv": "results/raw_results.csv",
+        "summary_csv": "results/summary_results.csv",
+        "comparison_csv": "results/comparison_results.csv",
+        "raw_json": "results/raw_results.json",
+        "experiment_configs_json": "results/experiment_configs.json"
+    }
+}

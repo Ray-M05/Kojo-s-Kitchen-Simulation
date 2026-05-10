@@ -16,22 +16,27 @@ from src.random_generators import RandomGenerator
 
 class KojoSimulator:
 
-    def __init__(self, seed: Optional[int], use_extra_employee: bool, logger):
+    def __init__(
+        self, seed: Optional[int], use_extra_employee: bool, logger, experiment_config: Optional[dict] = None):
+
         self.seed = seed
         self.use_extra_employee = use_extra_employee
         self.logger = logger
+        self.experiment_config = experiment_config or config.EXPERIMENT_CONFIGS[0]
+
+        config.validate_experiment_config(self.experiment_config)
+
+        self.config_id = self.experiment_config["config_id"]
+        self.mean_interarrival_normal = self.experiment_config["mean_interarrival_normal"]
+        self.mean_interarrival_peak = self.experiment_config["mean_interarrival_peak"]
+
         self.rng = RandomGenerator(seed)
 
-        # Reloj de simulación.
         self.clock = config.DAY_OPEN
-
-        # Cola de eventos futuros.
         self.event_queue = []
         self.sequence = 0
 
-        # Cola FIFO de clientes esperando servicio.
         self.waiting_queue: Deque[Client] = deque()
-
         self.employees: List[Employee] = self.create_employees()
 
         self.total_customers = 0
@@ -40,13 +45,26 @@ class KojoSimulator:
 
         self.total_waiting_time = 0.0
         self.max_waiting_time = 0.0
-
-        # Área bajo la curva de longitud de cola.
-        # Se usa para estimar la longitud promedio de la cola.
         self.area_queue = 0.0
 
         self.generated_customers = 0
 
+
+    def get_mean_interarrival(self, segment_type: str) -> float:
+        """
+        Devuelve la media entre llegadas según el tipo de segmento.
+
+        Esta función permite que cada configuración experimental tenga
+        diferentes valores de llegada normal y llegada en hora pico.
+        """
+
+        if segment_type == config.NORMAL:
+            return self.mean_interarrival_normal
+
+        if segment_type == config.PEAK:
+            return self.mean_interarrival_peak
+
+        raise ValueError(f"Tipo de segmento desconocido: {segment_type}")
 
     def create_employees(self) -> List[Employee]:
 
@@ -108,7 +126,7 @@ class KojoSimulator:
         client_id = 1
 
         for start, end, segment_type in config.DAY_SEGMENTS:
-            mean_interarrival = config.INTERARRIVAL_MEANS[segment_type]
+            mean_interarrival = self.get_mean_interarrival(segment_type)
 
             t = start
             while True:
@@ -153,7 +171,13 @@ class KojoSimulator:
         """
 
         self.logger.info(
-            "Simulation started | seed=%s | extra_employee=%s", self.seed, self.use_extra_employee,)
+            ("Simulation started | seed=%s | config_id=%s | "
+                "normal_arrival_mean=%.2f | peak_arrival_mean=%.2f | extra_employee=%s"),
+            self.seed,
+            self.config_id,
+            self.mean_interarrival_normal,
+            self.mean_interarrival_peak,
+            self.use_extra_employee)
 
         self.schedule_initial_events()
 
@@ -460,6 +484,9 @@ class KojoSimulator:
 
         results = {
             "seed": self.seed,
+            "config_id": self.config_id,
+            "mean_interarrival_normal": self.mean_interarrival_normal,
+            "mean_interarrival_peak": self.mean_interarrival_peak,
             "use_extra_employee": self.use_extra_employee,
             "simulation_end_time": self.clock,
             "total_customers": self.total_customers,
