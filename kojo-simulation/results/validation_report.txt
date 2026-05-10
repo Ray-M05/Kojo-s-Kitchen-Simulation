@@ -1,0 +1,30 @@
+Validation report
+=================
+
+Run directory: results
+
+Summary
+-------
+Errors: 0
+Warnings: 0
+Info: 3
+
+Errors
+------
+None
+
+Warnings
+--------
+None
+
+Information
+-----------
+1. [INFO] summary_delayed_percentage
+   config_id=arrival_normal_5_peak_2_5: delayed_percentage promedio base=48.0238, extra=10.9892, mejora=37.0347 puntos porcentuales.
+
+2. [INFO] summary_delayed_percentage
+   config_id=arrival_normal_6_peak_2_0: delayed_percentage promedio base=66.3733, extra=23.3068, mejora=43.0666 puntos porcentuales.
+
+3. [INFO] summary_delayed_percentage
+   config_id=arrival_normal_6_peak_2_5: delayed_percentage promedio base=45.5482, extra=8.2077, mejora=37.3405 puntos porcentuales.
+
