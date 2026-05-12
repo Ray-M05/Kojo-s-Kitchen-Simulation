@@ -16,20 +16,6 @@ WARNING = "WARNING"
 
 
 def main() -> None:
-    """
-    Punto de entrada del validador.
-
-    Uso:
-
-        py -m src.validation
-
-    o:
-
-        py -m src.validation results/run_2026_05_09_104500
-
-    Si no se pasa una carpeta, se intenta validar automáticamente
-    la corrida más reciente dentro de results/.
-    """
 
     run_dir = get_run_dir_from_args()
 
@@ -63,19 +49,7 @@ def main() -> None:
     print()
     print("Validación finalizada correctamente.")
 
-
-# ------------------------------------------------------------
-# Localización de archivos
-# ------------------------------------------------------------
-
 def get_run_dir_from_args() -> Optional[Path]:
-    """
-    Obtiene la carpeta de resultados a validar.
-
-    Si el usuario pasa una ruta por consola, se usa esa ruta.
-    Si no pasa nada, se busca la última carpeta results/run_*.
-    Si no existen carpetas run_*, se intenta usar results/.
-    """
 
     if len(sys.argv) >= 2:
         candidate = Path(sys.argv[1])
@@ -103,8 +77,6 @@ def get_run_dir_from_args() -> Optional[Path]:
     if run_dirs:
         return max(run_dirs, key=lambda path: path.stat().st_mtime)
 
-    # Compatibilidad con la versión anterior, donde los CSV estaban
-    # directamente dentro de results/.
     if (results_dir / RAW_RESULTS_FILENAME).exists():
         return results_dir
 
@@ -112,23 +84,12 @@ def get_run_dir_from_args() -> Optional[Path]:
 
 
 def read_csv(path: Path) -> List[Dict[str, str]]:
-    """
-    Lee un archivo CSV y devuelve una lista de diccionarios.
-    """
-
+    # Lee un archivo CSV y devuelve una lista de diccionarios.
     with path.open("r", newline="", encoding="utf-8") as file:
         reader = csv.DictReader(file)
         return list(reader)
 
-
-# ------------------------------------------------------------
-# Validación principal
-# ------------------------------------------------------------
-
 def validate_run_directory(run_dir: Path) -> List[Dict[str, str]]:
-    """
-    Ejecuta todas las validaciones sobre una carpeta de resultados.
-    """
 
     issues: List[Dict[str, str]] = []
 
@@ -177,15 +138,7 @@ def validate_run_directory(run_dir: Path) -> List[Dict[str, str]]:
 
     return issues
 
-
-# ------------------------------------------------------------
-# Validaciones específicas
-# ------------------------------------------------------------
-
 def validate_required_columns(rows: List[Dict[str, str]], issues: List[Dict[str, str]]) -> None:
-    """
-    Verifica que raw_results.csv tenga las columnas mínimas esperadas.
-    """
 
     required_columns = [
         "config_id",
@@ -216,9 +169,6 @@ def validate_required_columns(rows: List[Dict[str, str]], issues: List[Dict[str,
 
 
 def validate_numeric_ranges(rows: List[Dict[str, str]], issues: List[Dict[str, str]]) -> None:
-    """
-    Valida que los valores numéricos básicos estén en rangos razonables.
-    """
 
     non_negative_columns = [
         "total_customers",
@@ -319,9 +269,6 @@ def validate_numeric_ranges(rows: List[Dict[str, str]], issues: List[Dict[str, s
 
 
 def validate_customer_consistency(rows: List[Dict[str, str]], issues: List[Dict[str, str]]) -> None:
-    """
-    Valida consistencia entre clientes totales, completados y demorados.
-    """
 
     for index, row in enumerate(rows, start=2):
         row_id = describe_row(row, index)
@@ -362,9 +309,6 @@ def validate_customer_consistency(rows: List[Dict[str, str]], issues: List[Dict[
 
 
 def validate_employee_utilization(rows: List[Dict[str, str]], issues: List[Dict[str, str]]) -> None:
-    """
-    Valida la utilización del empleado extra en cada escenario.
-    """
 
     for index, row in enumerate(rows, start=2):
         row_id = describe_row(row, index)
@@ -401,9 +345,6 @@ def validate_employee_utilization(rows: List[Dict[str, str]], issues: List[Dict[
 
 
 def validate_duplicate_rows(rows: List[Dict[str, str]], issues: List[Dict[str, str]]) -> None:
-    """
-    Detecta filas duplicadas por configuración, réplica y escenario.
-    """
 
     seen = set()
 
@@ -578,15 +519,7 @@ def validate_comparison_results(
                 ),
             )
 
-
-# ------------------------------------------------------------
-# Información resumen
-# ------------------------------------------------------------
-
 def add_summary_information(rows: List[Dict[str, str]], issues: List[Dict[str, str]]) -> None:
-    """
-    Agrega información útil al reporte final como mensajes informativos.
-    """
 
     grouped_by_config = {}
 
@@ -631,10 +564,6 @@ def add_summary_information(rows: List[Dict[str, str]], issues: List[Dict[str, s
             )
 
 
-# ------------------------------------------------------------
-# Utilidades
-# ------------------------------------------------------------
-
 def group_raw_rows(rows: List[Dict[str, str]]) -> Dict[Tuple[str, str], Dict[str, Dict[str, str]]]:
     """
     Agrupa raw_results por config_id y replication.
@@ -673,9 +602,6 @@ def add_issue(
     code: str,
     message: str,
 ) -> None:
-    """
-    Agrega un mensaje de validación.
-    """
 
     issues.append(
         {
@@ -687,17 +613,10 @@ def add_issue(
 
 
 def count_issues(issues: List[Dict[str, str]], severity: str) -> int:
-    """
-    Cuenta mensajes por severidad.
-    """
-
     return sum(1 for issue in issues if issue["severity"] == severity)
 
 
 def write_validation_report(run_dir: Path, issues: List[Dict[str, str]]) -> Path:
-    """
-    Escribe el reporte de validación en un archivo de texto.
-    """
 
     report_path = run_dir / VALIDATION_REPORT_FILENAME
 
@@ -724,9 +643,6 @@ def write_validation_report(run_dir: Path, issues: List[Dict[str, str]]) -> Path
 
 
 def write_issue_section(file, title: str, issues: List[Dict[str, str]]) -> None:
-    """
-    Escribe una sección del reporte.
-    """
 
     file.write(f"{title}\n")
     file.write("-" * len(title))
@@ -742,9 +658,6 @@ def write_issue_section(file, title: str, issues: List[Dict[str, str]]) -> None:
 
 
 def describe_row(row: Dict[str, str], index: int) -> str:
-    """
-    Devuelve una descripción corta de una fila para mensajes de error.
-    """
 
     return (
         f"Fila {index} "
@@ -755,9 +668,6 @@ def describe_row(row: Dict[str, str], index: int) -> str:
 
 
 def to_float(value) -> Optional[float]:
-    """
-    Convierte un valor a float. Si no puede, devuelve None.
-    """
 
     if value is None:
         return None
@@ -769,9 +679,6 @@ def to_float(value) -> Optional[float]:
 
 
 def to_int(value) -> Optional[int]:
-    """
-    Convierte un valor a int. Si no puede, devuelve None.
-    """
 
     if value is None:
         return None

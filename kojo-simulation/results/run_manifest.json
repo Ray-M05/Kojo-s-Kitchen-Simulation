@@ -1,6 +1,6 @@
 {
-    "created_at": "2026-05-10T11:49:41",
-    "n_rows": 60,
+    "created_at": "2026-05-12T11:54:07",
+    "n_rows": 140,
     "n_replications": 10,
     "scenarios": [
         {
@@ -27,6 +27,26 @@
             "config_id": "arrival_normal_5_peak_2_5",
             "mean_interarrival_normal": 5.0,
             "mean_interarrival_peak": 2.5
+        },
+        {
+            "config_id": "arrival_normal_8_peak_2_0",
+            "mean_interarrival_normal": 8.0,
+            "mean_interarrival_peak": 2.0
+        },
+        {
+            "config_id": "arrival_normal_10_peak_7_5",
+            "mean_interarrival_normal": 10.0,
+            "mean_interarrival_peak": 7.5
+        },
+        {
+            "config_id": "arrival_normal_4_peak_2_0",
+            "mean_interarrival_normal": 4.0,
+            "mean_interarrival_peak": 2.0
+        },
+        {
+            "config_id": "arrival_normal_7_peak_5_5",
+            "mean_interarrival_normal": 7.0,
+            "mean_interarrival_peak": 5.5
         }
     ],
     "outputs": {

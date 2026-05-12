@@ -7,7 +7,7 @@ Summary
 -------
 Errors: 0
 Warnings: 0
-Info: 3
+Info: 7
 
 Errors
 ------
@@ -20,11 +20,23 @@ None
 Information
 -----------
 1. [INFO] summary_delayed_percentage
-   config_id=arrival_normal_5_peak_2_5: delayed_percentage promedio base=48.0238, extra=10.9892, mejora=37.0347 puntos porcentuales.
+   config_id=arrival_normal_10_peak_7_5: delayed_percentage promedio base=1.7582, extra=0.2632, mejora=1.4950 puntos porcentuales.
 
 2. [INFO] summary_delayed_percentage
-   config_id=arrival_normal_6_peak_2_0: delayed_percentage promedio base=66.3733, extra=23.3068, mejora=43.0666 puntos porcentuales.
+   config_id=arrival_normal_4_peak_2_0: delayed_percentage promedio base=70.8635, extra=29.1404, mejora=41.7230 puntos porcentuales.
 
 3. [INFO] summary_delayed_percentage
+   config_id=arrival_normal_5_peak_2_5: delayed_percentage promedio base=48.0238, extra=10.9892, mejora=37.0347 puntos porcentuales.
+
+4. [INFO] summary_delayed_percentage
+   config_id=arrival_normal_6_peak_2_0: delayed_percentage promedio base=66.3733, extra=23.3068, mejora=43.0666 puntos porcentuales.
+
+5. [INFO] summary_delayed_percentage
    config_id=arrival_normal_6_peak_2_5: delayed_percentage promedio base=45.5482, extra=8.2077, mejora=37.3405 puntos porcentuales.
+
+6. [INFO] summary_delayed_percentage
+   config_id=arrival_normal_7_peak_5_5: delayed_percentage promedio base=3.2172, extra=1.6280, mejora=1.5892 puntos porcentuales.
+
+7. [INFO] summary_delayed_percentage
+   config_id=arrival_normal_8_peak_2_0: delayed_percentage promedio base=67.5412, extra=24.4842, mejora=43.0570 puntos porcentuales.
 
