@@ -1,5 +1,5 @@
 {
-    "created_at": "2026-05-12T11:54:07",
+    "created_at": "2026-05-12T13:11:56",
     "n_rows": 140,
     "n_replications": 10,
     "scenarios": [
@@ -53,6 +53,7 @@
         "raw_csv": "results/raw_results.csv",
         "summary_csv": "results/summary_results.csv",
         "comparison_csv": "results/comparison_results.csv",
+        "readable_comparison_json": "results/comparison_results_readable.json",
         "raw_json": "results/raw_results.json",
         "experiment_configs_json": "results/experiment_configs.json"
     }

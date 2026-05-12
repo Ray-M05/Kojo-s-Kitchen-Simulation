@@ -2,10 +2,15 @@ import csv
 import json
 import os
 from datetime import datetime
-from typing import Dict, List
-
+from typing import Dict, List, Tuple
 import config
-from src.metrics import summarize
+from src.metrics import (
+    improvement_for_json,
+    rounded,
+    summarize,
+    summarize_for_json,
+    summarize_improvement_for_json,
+)
 from src.simulator import KojoSimulator
 
 
@@ -20,6 +25,9 @@ SCENARIOS = [
     },
 ]
 
+BASE_SCENARIO = "two_employees"
+EXTRA_SCENARIO = "extra_employee_peak"
+
 
 METRICS_TO_SUMMARIZE = [
     "delayed_percentage",
@@ -33,6 +41,29 @@ METRICS_TO_SUMMARIZE = [
     "employee_2_utilization",
     "employee_3_utilization",
 ]
+
+READABLE_IMPROVEMENT_METRICS = {
+    "delayed_percentage": {
+        "unit": "percentage_points",
+        "label": "percent_of_customers_waiting_more_than_5_minutes",
+    },
+    "delayed_customers": {
+        "unit": "customers",
+        "label": "customers_waiting_more_than_5_minutes",
+    },
+    "average_wait": {
+        "unit": "minutes",
+        "label": "average_wait_before_service",
+    },
+    "max_wait": {
+        "unit": "minutes",
+        "label": "maximum_wait_before_service",
+    },
+    "average_queue_length": {
+        "unit": "customers",
+        "label": "average_queue_length",
+    },
+}
 
 
 PREFERRED_RAW_FIELD_ORDER = [
@@ -61,7 +92,6 @@ PREFERRED_RAW_FIELD_ORDER = [
 
 
 def run_experiments(logger) -> List[Dict]:
-
     os.makedirs("results", exist_ok=True)
 
     raw_results = []
@@ -145,6 +175,7 @@ def run_experiments(logger) -> List[Dict]:
     raw_csv_path = save_raw_results(raw_results)
     summary_csv_path = save_summary_results(raw_results)
     comparison_csv_path = save_comparison_results(raw_results)
+    readable_comparison_json_path = save_readable_comparison_results_json(raw_results)
 
     raw_json_path = save_raw_results_json(raw_results)
     config_json_path = save_experiment_configs_json()
@@ -153,6 +184,10 @@ def run_experiments(logger) -> List[Dict]:
     logger.info("Raw CSV results saved | path=%s", raw_csv_path)
     logger.info("Summary CSV results saved | path=%s", summary_csv_path)
     logger.info("Comparison CSV results saved | path=%s", comparison_csv_path)
+    logger.info(
+        "Readable comparison JSON saved | path=%s",
+        readable_comparison_json_path,
+    )
 
     logger.info("Raw JSON results saved | path=%s", raw_json_path)
     logger.info("Experiment configs JSON saved | path=%s", config_json_path)
@@ -164,8 +199,8 @@ def run_experiments(logger) -> List[Dict]:
 
     return raw_results
 
-def save_raw_results(raw_results: List[Dict]) -> str:
 
+def save_raw_results(raw_results: List[Dict]) -> str:
     path = "results/raw_results.csv"
 
     if not raw_results:
@@ -182,7 +217,6 @@ def save_raw_results(raw_results: List[Dict]) -> str:
 
 
 def save_summary_results(raw_results: List[Dict]) -> str:
-
     path = "results/summary_results.csv"
 
     if not raw_results:
@@ -257,7 +291,6 @@ def save_summary_results(raw_results: List[Dict]) -> str:
     return path
 
 def save_comparison_results(raw_results: List[Dict]) -> str:
-
     path = "results/comparison_results.csv"
 
     if not raw_results:
@@ -267,8 +300,8 @@ def save_comparison_results(raw_results: List[Dict]) -> str:
     comparison_rows = []
 
     for (config_id, replication), rows in sorted(rows_by_replication.items()):
-        base = rows.get("two_employees")
-        extra = rows.get("extra_employee_peak")
+        base = rows.get(BASE_SCENARIO)
+        extra = rows.get(EXTRA_SCENARIO)
 
         if base is None or extra is None:
             continue
@@ -325,8 +358,226 @@ def save_comparison_results(raw_results: List[Dict]) -> str:
     return path
 
 
-def group_by_replication(raw_results: List[Dict]) -> Dict[tuple, Dict[str, Dict]]:
+def save_readable_comparison_results_json(raw_results: List[Dict]) -> str:
 
+    path = "results/comparison_results_readable.json"
+
+    data = build_readable_comparison_data(raw_results)
+
+    with open(path, "w", encoding="utf-8") as file:
+        json.dump(data, file, indent=4, ensure_ascii=False)
+
+    return path
+
+
+def build_readable_comparison_data(raw_results: List[Dict]) -> Dict:
+    rows_by_replication = group_by_replication(raw_results)
+    config_ids = ordered_config_ids(raw_results)
+
+    return {
+        "created_at": datetime.now().isoformat(timespec="seconds"),
+        "description": (
+            "Compact comparison between the base scenario with two employees "
+            "and the alternative scenario with an extra employee during peak hours."
+        ),
+        "comparison_definition": {
+            "base_scenario": BASE_SCENARIO,
+            "alternative_scenario": EXTRA_SCENARIO,
+            "improvement_formula": "base - with_extra",
+            "relative_reduction_formula": "(base - with_extra) / base * 100",
+            "positive_improvement_means": (
+                "The extra employee reduced waiting, delay, or queue congestion."
+            ),
+        },
+        "readability_policy": {
+            "included_metrics": list(READABLE_IMPROVEMENT_METRICS.keys()),
+            "omitted_from_improvement_view": [
+                "total_customers",
+                "completed_customers",
+                "employee_1_busy_time",
+                "employee_1_utilization",
+                "employee_2_busy_time",
+                "employee_2_utilization",
+                "employee_3_busy_time compared against zero in the base scenario",
+            ],
+            "reason": (
+                "The omitted metrics are either identical by design or useful only "
+                "for audit. They stay in raw_results.json and comparison_results.csv."
+            ),
+        },
+        "n_configurations": len(config_ids),
+        "n_replications_per_configuration": config.N_REPLICATIONS,
+        "configurations": [
+            build_readable_config_block(config_id, rows_by_replication)
+            for config_id in config_ids
+        ],
+    }
+
+
+def build_readable_config_block(
+    config_id: str,
+    rows_by_replication: Dict[tuple, Dict[str, Dict]],
+) -> Dict:
+    pairs = get_replication_pairs_for_config(config_id, rows_by_replication)
+
+    if not pairs:
+        return {
+            "config_id": config_id,
+            "parameters": {},
+            "summary": {},
+            "replications": [],
+        }
+
+    first_base = pairs[0][1]
+
+    return {
+        "config_id": config_id,
+        "parameters": {
+            "mean_interarrival_normal": first_base["mean_interarrival_normal"],
+            "mean_interarrival_peak": first_base["mean_interarrival_peak"],
+        },
+        "summary": build_readable_summary(pairs),
+        "replications": [
+            build_readable_replication_block(replication, base, extra)
+            for replication, base, extra in pairs
+        ],
+    }
+
+
+def build_readable_summary(pairs: List[Tuple[int, Dict, Dict]]) -> Dict:
+    base_rows = [base for _, base, _ in pairs]
+    extra_rows = [extra for _, _, extra in pairs]
+
+    metric_summaries = {}
+
+    for metric, metadata in READABLE_IMPROVEMENT_METRICS.items():
+        metric_summaries[metric] = summarize_improvement_for_json(
+            [row[metric] for row in base_rows],
+            [row[metric] for row in extra_rows],
+            unit=metadata["unit"],
+        )
+        metric_summaries[metric]["label"] = metadata["label"]
+
+    customers_base = [row["total_customers"] for row in base_rows]
+    customers_extra = [row["total_customers"] for row in extra_rows]
+
+    return {
+        "main_metric": {
+            "delayed_percentage": metric_summaries["delayed_percentage"],
+        },
+        "secondary_metrics": {
+            metric: summary
+            for metric, summary in metric_summaries.items()
+            if metric != "delayed_percentage"
+        },
+        "demand_check": {
+            "same_total_customers_in_all_pairs": customers_base == customers_extra,
+            "customers": summarize_for_json(customers_base, unit="customers"),
+        },
+        "extra_employee": {
+            "utilization": summarize_for_json(
+                [row["employee_3_utilization"] for row in extra_rows],
+                unit="proportion",
+            ),
+            "busy_time_minutes": summarize_for_json(
+                [row["employee_3_busy_time"] for row in extra_rows],
+                unit="minutes",
+            ),
+        },
+    }
+
+
+def build_readable_replication_block(replication: int, base: Dict, extra: Dict) -> Dict:
+    same_total_customers = base["total_customers"] == extra["total_customers"]
+    same_completed_customers = base["completed_customers"] == extra["completed_customers"]
+
+    block = {
+        "replication": replication,
+        "seed": base["seed"],
+        "customers": base["total_customers"],
+        "main_metric": {
+            "delayed_percentage": improvement_for_json(
+                base["delayed_percentage"],
+                extra["delayed_percentage"],
+                unit="percentage_points",
+            )
+        },
+        "secondary_metrics": {
+            "delayed_customers": improvement_for_json(
+                base["delayed_customers"],
+                extra["delayed_customers"],
+                unit="customers",
+            ),
+            "average_wait": improvement_for_json(
+                base["average_wait"],
+                extra["average_wait"],
+                unit="minutes",
+            ),
+            "max_wait": improvement_for_json(
+                base["max_wait"],
+                extra["max_wait"],
+                unit="minutes",
+            ),
+            "average_queue_length": improvement_for_json(
+                base["average_queue_length"],
+                extra["average_queue_length"],
+                unit="customers",
+            ),
+        },
+        "extra_employee": {
+            "utilization": rounded(extra["employee_3_utilization"]),
+            "busy_time_minutes": rounded(extra["employee_3_busy_time"]),
+        },
+    }
+
+    if not same_total_customers or not same_completed_customers:
+        block["demand_warning"] = {
+            "same_total_customers": same_total_customers,
+            "same_completed_customers": same_completed_customers,
+            "base_total_customers": base["total_customers"],
+            "with_extra_total_customers": extra["total_customers"],
+            "base_completed_customers": base["completed_customers"],
+            "with_extra_completed_customers": extra["completed_customers"],
+        }
+
+    return block
+
+
+def get_replication_pairs_for_config(
+    config_id: str,
+    rows_by_replication: Dict[tuple, Dict[str, Dict]],
+) -> List[Tuple[int, Dict, Dict]]:
+    pairs = []
+
+    for (row_config_id, replication), rows in sorted(rows_by_replication.items()):
+        if row_config_id != config_id:
+            continue
+
+        base = rows.get(BASE_SCENARIO)
+        extra = rows.get(EXTRA_SCENARIO)
+
+        if base is None or extra is None:
+            continue
+
+        pairs.append((replication, base, extra))
+
+    return pairs
+
+
+def ordered_config_ids(raw_results: List[Dict]) -> List[str]:
+    configured_ids = [
+        experiment_config["config_id"]
+        for experiment_config in config.EXPERIMENT_CONFIGS
+    ]
+    result_ids = {row["config_id"] for row in raw_results}
+
+    ordered = [config_id for config_id in configured_ids if config_id in result_ids]
+    extras = sorted(result_ids - set(ordered))
+
+    return ordered + extras
+
+
+def group_by_replication(raw_results: List[Dict]) -> Dict[tuple, Dict[str, Dict]]:
     grouped = {}
 
     for row in raw_results:
@@ -345,7 +596,6 @@ def group_by_replication(raw_results: List[Dict]) -> Dict[tuple, Dict[str, Dict]
 
 
 def build_fieldnames(raw_results: List[Dict]) -> List[str]:
-
     all_fields = set()
 
     for row in raw_results:
@@ -362,14 +612,13 @@ def build_fieldnames(raw_results: List[Dict]) -> List[str]:
 
 
 def log_main_comparison(raw_results: List[Dict], logger) -> None:
-
     rows_by_replication = group_by_replication(raw_results)
 
     improvements_by_config = {}
 
     for (config_id, replication), rows in rows_by_replication.items():
-        base = rows.get("two_employees")
-        extra = rows.get("extra_employee_peak")
+        base = rows.get(BASE_SCENARIO)
+        extra = rows.get(EXTRA_SCENARIO)
 
         if base is None or extra is None:
             continue
@@ -403,7 +652,6 @@ def log_main_comparison(raw_results: List[Dict], logger) -> None:
 
 
 def save_raw_results_json(raw_results: List[Dict]) -> str:
-
     path = "results/raw_results.json"
 
     with open(path, "w", encoding="utf-8") as file:
@@ -411,8 +659,8 @@ def save_raw_results_json(raw_results: List[Dict]) -> str:
 
     return path
 
-def save_experiment_configs_json() -> str:
 
+def save_experiment_configs_json() -> str:
     path = "results/experiment_configs.json"
 
     data = {
@@ -433,8 +681,8 @@ def save_experiment_configs_json() -> str:
 
     return path
 
-def save_run_manifest_json(raw_results: List[Dict]) -> str:
 
+def save_run_manifest_json(raw_results: List[Dict]) -> str:
     path = "results/run_manifest.json"
 
     data = {
@@ -447,6 +695,7 @@ def save_run_manifest_json(raw_results: List[Dict]) -> str:
             "raw_csv": "results/raw_results.csv",
             "summary_csv": "results/summary_results.csv",
             "comparison_csv": "results/comparison_results.csv",
+            "readable_comparison_json": "results/comparison_results_readable.json",
             "raw_json": "results/raw_results.json",
             "experiment_configs_json": "results/experiment_configs.json",
         },
@@ -456,4 +705,3 @@ def save_run_manifest_json(raw_results: List[Dict]) -> str:
         json.dump(data, file, indent=4, ensure_ascii=False)
 
     return path
-
