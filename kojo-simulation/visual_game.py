@@ -440,7 +440,7 @@ class AssetManager:
             lambda s: generate_food_sprite(name, s),
         )
 
-    def chef(self, state="idle", size=(88, 110)) -> pygame.Surface:
+    def chef(self, state="idle", size=(120, 150)) -> pygame.Surface:
         state = state if state in {"idle", "busy", "inactive"} else "idle"
         return self.load(
             f"chef_{state}",
@@ -449,7 +449,7 @@ class AssetManager:
             lambda s: generate_chef_sprite(state, s),
         )
 
-    def customer(self, product="sandwich", angry=False, size=(72, 100)) -> pygame.Surface:
+    def customer(self, product="sandwich", angry=False, size=(102, 140)) -> pygame.Surface:
         product = product if product in PRODUCT_STYLES else "sandwich"
         key = f"customer_{product}_{'angry' if angry else 'ok'}"
         candidates = [
@@ -1245,15 +1245,15 @@ class KojoOvercookedApp:
         angry = service_start is None and wait > getattr(config, "WAIT_THRESHOLD", 5.0)
         moving = abs(motion.x - motion.tx) + abs(motion.y - motion.ty) > 12
         bob = math.sin(self.phase * (9.0 if moving else 3.0) + (getattr(client, "id", 0) or 0)) * (4 if moving else 1.5)
-        sprite = self.assets.customer(product, angry=angry, size=(74, 102))
-        shadow(self.logical, (motion.x, motion.y + 18), 48, 13, 50)
+        sprite = self.assets.customer(product, angry=angry, size=(102, 140))
+        shadow(self.logical, (motion.x, motion.y + 18), 64, 16, 50)
         self.logical.blit(sprite, sprite.get_rect(midbottom=(motion.x, motion.y + bob)))
         cid = getattr(client, "id", "") if client is not None else ""
-        draw_text(self.logical, self.font_xs, f"C{cid}", (motion.x, motion.y - 82), (37, 31, 26), anchor="center")
-        self.draw_order_bubble(product, (motion.x + 34, motion.y - 76), small=True)
+        draw_text(self.logical, self.font_xs, f"C{cid}", (motion.x, motion.y - 120), (37, 31, 26), anchor="center")
+        self.draw_order_bubble(product, (motion.x + 48, motion.y - 110), small=True)
         if service_start is None and wait > 0.1:
             color = (160, 36, 45) if angry else (46, 64, 82)
-            draw_text(self.logical, self.font_xs, f"{wait:.1f}m", (motion.x, motion.y + 14), color, anchor="center")
+            draw_text(self.logical, self.font_xs, f"{wait:.1f}m", (motion.x, motion.y + 20), color, anchor="center")
 
     def draw_employee(self, employee_id: int, motion: Motion):
         emp = None
@@ -1267,13 +1267,13 @@ class KojoOvercookedApp:
         state = "inactive" if not active else "busy" if busy else "idle"
         moving = abs(motion.x - motion.tx) + abs(motion.y - motion.ty) > 8
         bob = math.sin(self.phase * (8 if moving else 2.5) + employee_id) * (3 if moving else 1)
-        sprite = self.assets.chef(state, size=(88, 110))
-        shadow(self.logical, (motion.x, motion.y + 18), 56, 14, 55)
+        sprite = self.assets.chef(state, size=(120, 150))
+        shadow(self.logical, (motion.x, motion.y + 18), 72, 18, 55)
         self.logical.blit(sprite, sprite.get_rect(midbottom=(motion.x, motion.y + bob)))
-        draw_text(self.logical, self.font_xs, f"E{employee_id}", (motion.x, motion.y - 93), (28, 28, 28), anchor="center")
+        draw_text(self.logical, self.font_xs, f"E{employee_id}", (motion.x, motion.y - 130), (28, 28, 28), anchor="center")
         if busy and emp is not None and getattr(emp, "current_client", None) is not None:
             product = getattr(emp.current_client, "product", "sandwich")
-            self.draw_order_bubble(product, (motion.x + 38, motion.y - 88), small=True)
+            self.draw_order_bubble(product, (motion.x + 54, motion.y - 120), small=True)
 
     def draw_order_bubble(self, product: str, pos, small=False):
         product = product if product in PRODUCT_STYLES else "sandwich"
@@ -1330,14 +1330,13 @@ class KojoOvercookedApp:
         draw_text(self.logical, self.font_xl, time_text, (1490, 824), (255, 255, 255), anchor="center")
         draw_text(self.logical, self.font_xs, "tiempo restante", (1490, 852), (255, 244, 220), anchor="center")
 
-        # Moneda/score: porcentaje de demora acumulado.
+        # Moneda/score: clientes atendidos.
         score_rect = pygame.Rect(18, 805, 140, 76)
         pygame.draw.ellipse(self.logical, (232, 195, 54), score_rect)
         pygame.draw.ellipse(self.logical, (162, 117, 32), score_rect, 4)
-        pct = 0.0
-        if self.simulator is not None and getattr(self.simulator, "total_customers", 0):
-            pct = 100 * getattr(self.simulator, "delayed_customers", 0) / max(1, getattr(self.simulator, "total_customers", 1))
-        draw_text(self.logical, self.font_xl, f"-{pct:.0f}", (88, 842), (255, 255, 255), anchor="center")
+        served = getattr(self.simulator, "completed_customers", 0)
+        draw_text(self.logical, self.font_xl, f"{served}", (88, 842), (255, 255, 255), anchor="center")
+        draw_text(self.logical, self.font_xs, "servidos", (88, 868), (255, 244, 220), anchor="center")
 
         if self.show_debug:
             self.draw_debug_panel()
